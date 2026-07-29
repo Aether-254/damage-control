@@ -2,6 +2,7 @@ package awa.Aether_254.damage_control;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.annotations.SerializedName;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -54,15 +55,21 @@ public final class DamageControlConfig {
     }
 
     public static final class Data {
+        @SerializedName("min_dropped_stacks")
         public int minDroppedStacks = 10;
+        @SerializedName("enable_for_shulker_boxes")
         public boolean enableForShulkerBoxes = false;
+        @SerializedName("container_blacklist")
         public List<String> containerBlacklist = new ArrayList<>();
         public EntitySettings entity = new EntitySettings();
+        @SerializedName("void_handling")
         public VoidHandling voidHandling = VoidHandling.TELEPORT;
     }
 
     public static final class EntitySettings {
+        @SerializedName("glow_effect")
         public boolean glowEffect = true;
+        @SerializedName("can_be_leashed")
         public boolean canBeLeashed = true;
     }
 
