@@ -6,4 +6,4 @@ pluginManagement {
     }
 }
 
-rootProject.name = "create-overstress-history"
+rootProject.name = "damage-control"
