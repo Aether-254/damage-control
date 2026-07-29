@@ -1,0 +1,43 @@
+plugins {
+    id "net.neoforged.moddev" version "2.0.141"
+    id "maven-publish"
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+    archivesName = project.archives_base_name
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+neoForge {
+    version = project.neo_version
+
+    mods {
+        "${project.mod_id}" {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+repositories {
+    maven { url = "https://maven.createmod.net" }
+    maven { url = "https://maven.ithundxr.dev/snapshots" }
+    maven { url = "https://raw.githubusercontent.com/Fuzss/modresources/main/maven" }
+    maven { url = "https://maven.shedaniel.me/" }
+    mavenCentral()
+}
+
+dependencies {
+    implementation "com.simibubi.create:create-1.21.1:${project.create_version}"
+    implementation "me.shedaniel.cloth:cloth-config-neoforge:${project.cloth_config_version}"
+}
+
+processResources {
+    inputs.property "version", project.version
+    filesMatching("META-INF/neoforge.mods.toml") {
+        expand "version": project.version
+    }
+}
