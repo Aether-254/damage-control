@@ -72,9 +72,16 @@ public final class DamagedPackageEntity extends PackageEntity implements Leashab
             }
             case TELEPORT -> {
                 BlockPos spawn = level().getSharedSpawnPos();
-                setNoGravity(false);
+                BlockPos landing = findSafeLanding(spawn);
                 setDeltaMovement(Vec3.ZERO);
-                setPos(spawn.getX() + 0.5, spawn.getY() + 1.0, spawn.getZ() + 0.5);
+                if (landing == null) {
+                    setNoGravity(true);
+                    setPos(spawn.getX() + 0.5, level().getMinBuildHeight() + 1.0, spawn.getZ() + 0.5);
+                } else {
+                    setNoGravity(false);
+                    setPos(landing.getX() + 0.5, landing.getY(), landing.getZ() + 0.5);
+                }
+                fallDistance = 0;
             }
             case SCATTER -> {
                 setPos(getX(), level().getMinBuildHeight() + 1.0, getZ());
@@ -82,6 +89,30 @@ public final class DamagedPackageEntity extends PackageEntity implements Leashab
             }
             case DESTROY -> discard();
         }
+    }
+
+    @Nullable
+    private BlockPos findSafeLanding(BlockPos spawn) {
+        int minY = level().getMinBuildHeight();
+        int maxY = level().getMaxBuildHeight() - 2;
+        int startY = Math.max(minY, Math.min(maxY, spawn.getY()));
+        for (int y = startY; y <= maxY; y++) {
+            BlockPos support = new BlockPos(spawn.getX(), y, spawn.getZ());
+            if (isSafeSupport(support))
+                return support.above();
+        }
+        for (int y = startY - 1; y >= minY; y--) {
+            BlockPos support = new BlockPos(spawn.getX(), y, spawn.getZ());
+            if (isSafeSupport(support))
+                return support.above();
+        }
+        return null;
+    }
+
+    private boolean isSafeSupport(BlockPos support) {
+        return !level().getBlockState(support).getCollisionShape(level(), support).isEmpty()
+            && level().getBlockState(support.above()).isAir()
+            && level().getBlockState(support.above(2)).isAir();
     }
 
     @Override
@@ -155,6 +186,11 @@ public final class DamagedPackageEntity extends PackageEntity implements Leashab
 
     @Override
     public boolean isPickable() {
+        return true;
+    }
+
+    @Override
+    public boolean isAttackable() {
         return true;
     }
 
