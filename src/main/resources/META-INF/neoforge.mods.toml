@@ -24,13 +24,6 @@ ordering="NONE"
 side="BOTH"
 
 [[dependencies.damage_control]]
-modId="create"
-type="required"
-versionRange="[6.0.10,6.1.0)"
-ordering="AFTER"
-side="BOTH"
-
-[[dependencies.damage_control]]
 modId="cloth_config"
 type="required"
 versionRange="[15.0.140,)"

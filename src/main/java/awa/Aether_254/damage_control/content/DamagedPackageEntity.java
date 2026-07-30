@@ -1,9 +1,6 @@
 package awa.Aether_254.damage_control.content;
 
 import awa.Aether_254.damage_control.DamageControlConfig;
-import com.simibubi.create.AllSoundEvents;
-import com.simibubi.create.content.logistics.box.PackageEntity;
-import com.simibubi.create.content.logistics.box.PackageStyles;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nullable;
@@ -14,6 +11,7 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
@@ -30,14 +28,15 @@ import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.CommonHooks;
 
-public final class DamagedPackageEntity extends PackageEntity implements Leashable {
+public final class DamagedPackageEntity extends ItemEntity implements Leashable {
     private final List<ItemStack> storedItems = new ArrayList<>();
     @Nullable
     private LeashData leashData;
 
-    public DamagedPackageEntity(EntityType<?> entityType, Level level) {
+    public DamagedPackageEntity(EntityType<? extends ItemEntity> entityType, Level level) {
         super(entityType, level);
-        setBox(PackageStyles.getDefaultBox());
+        setItem(Items.BARREL.getDefaultInstance());
+        setNeverPickUp();
         setGlowingTag(DamageControlConfig.get().entity.glowEffect);
     }
 
@@ -72,9 +71,16 @@ public final class DamagedPackageEntity extends PackageEntity implements Leashab
             }
             case TELEPORT -> {
                 BlockPos spawn = level().getSharedSpawnPos();
-                setNoGravity(false);
+                BlockPos landing = findSafeLanding(spawn);
                 setDeltaMovement(Vec3.ZERO);
-                setPos(spawn.getX() + 0.5, spawn.getY() + 1.0, spawn.getZ() + 0.5);
+                if (landing == null) {
+                    setNoGravity(true);
+                    setPos(spawn.getX() + 0.5, level().getMinBuildHeight() + 1.0, spawn.getZ() + 0.5);
+                } else {
+                    setNoGravity(false);
+                    setPos(landing.getX() + 0.5, landing.getY(), landing.getZ() + 0.5);
+                }
+                fallDistance = 0;
             }
             case SCATTER -> {
                 setPos(getX(), level().getMinBuildHeight() + 1.0, getZ());
@@ -82,6 +88,30 @@ public final class DamagedPackageEntity extends PackageEntity implements Leashab
             }
             case DESTROY -> discard();
         }
+    }
+
+    @Nullable
+    private BlockPos findSafeLanding(BlockPos spawn) {
+        int minY = level().getMinBuildHeight();
+        int maxY = level().getMaxBuildHeight() - 2;
+        int startY = Math.max(minY, Math.min(maxY, spawn.getY()));
+        for (int y = startY; y <= maxY; y++) {
+            BlockPos support = new BlockPos(spawn.getX(), y, spawn.getZ());
+            if (isSafeSupport(support))
+                return support.above();
+        }
+        for (int y = startY - 1; y >= minY; y--) {
+            BlockPos support = new BlockPos(spawn.getX(), y, spawn.getZ());
+            if (isSafeSupport(support))
+                return support.above();
+        }
+        return null;
+    }
+
+    private boolean isSafeSupport(BlockPos support) {
+        return !level().getBlockState(support).getCollisionShape(level(), support).isEmpty()
+            && level().getBlockState(support.above()).isAir()
+            && level().getBlockState(support.above(2)).isAir();
     }
 
     @Override
@@ -100,7 +130,7 @@ public final class DamagedPackageEntity extends PackageEntity implements Leashab
             return;
         serverLevel.sendParticles(ParticleTypes.POOF, getX(), getY() + 0.4, getZ(),
             18, 0.35, 0.3, 0.35, 0.03);
-        AllSoundEvents.PACKAGE_POP.playOnServer(level(), blockPosition());
+        level().playSound(null, blockPosition(), SoundEvents.BARREL_CLOSE, SoundSource.BLOCKS, 1, 0.8f);
         for (ItemStack stack : storedItems) {
             if (stack.isEmpty())
                 continue;
@@ -112,6 +142,10 @@ public final class DamagedPackageEntity extends PackageEntity implements Leashab
         }
         storedItems.clear();
         remove(RemovalReason.KILLED);
+    }
+
+    @Override
+    public void playerTouch(Player player) {
     }
 
     @Override
